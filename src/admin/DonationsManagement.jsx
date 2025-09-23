@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
@@ -14,67 +14,22 @@ import {
   Filter,
   Search,
   Eye,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import apiService from '@/services/apiService';
 
 const DonationsManagement = () => {
+  const [donations, setDonations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-
-  // Mock data - in real app, this would come from API
-  const donations = [
-    {
-      id: 1,
-      donorName: 'أحمد محمد',
-      donorPhone: '+971501234567',
-      donorEmail: 'ahmed@example.com',
-      location: 'دبي',
-      items: [
-        { name: 'هاتف ذكي سامسونج', condition: 'جيد', quantity: 1 },
-        { name: 'شاحن هاتف', condition: 'ممتاز', quantity: 1 }
-      ],
-      status: 'pending',
-      requestDate: '2024-01-15',
-      notes: 'أجهزة إلكترونية مستعملة بحالة جيدة',
-      images: ['https://via.placeholder.com/200', 'https://via.placeholder.com/200']
-    },
-    {
-      id: 2,
-      donorName: 'فاطمة علي',
-      donorPhone: '+971507654321',
-      donorEmail: 'fatima@example.com',
-      location: 'أبوظبي',
-      items: [
-        { name: 'كرسي مكتب', condition: 'جيد جداً', quantity: 2 },
-        { name: 'مكتب خشبي', condition: 'جيد', quantity: 1 }
-      ],
-      status: 'approved',
-      requestDate: '2024-01-14',
-      notes: 'أثاث مكتبي بحالة ممتازة',
-      images: ['https://via.placeholder.com/200']
-    },
-    {
-      id: 3,
-      donorName: 'محمد حسن',
-      donorPhone: '+971509876543',
-      donorEmail: 'mohamed@example.com',
-      location: 'الشارقة',
-      items: [
-        { name: 'ملابس أطفال', condition: 'جيد', quantity: 10 },
-        { name: 'ألعاب أطفال', condition: 'ممتاز', quantity: 5 }
-      ],
-      status: 'rejected',
-      requestDate: '2024-01-13',
-      notes: 'ملابس وألعاب أطفال مستعملة',
-      rejectionReason: 'الأغراض غير مناسبة للمنصة'
-    }
-  ];
 
   const statuses = [
     { value: 'all', label: 'جميع الطلبات' },
@@ -84,14 +39,52 @@ const DonationsManagement = () => {
     { value: 'collected', label: 'تم الاستلام' }
   ];
 
-  const filteredDonations = donations.filter(donation => {
-    const matchesSearch = donation.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         donation.donorPhone.includes(searchTerm) ||
-                         donation.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || donation.status === selectedStatus;
+  useEffect(() => {
+    fetchDonations();
+  }, [selectedStatus]);
 
-    return matchesSearch && matchesStatus;
-  });
+  const fetchDonations = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const params = {};
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      const response = await apiService.getDonations(params);
+
+      if (response.success) {
+        setDonations(response.data);
+      } else {
+        setError('فشل في تحميل طلبات التبرع');
+      }
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+      setError('حدث خطأ أثناء تحميل طلبات التبرع');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateDonationStatus = async (donationId, newStatus) => {
+    try {
+      const response = await apiService.updateDonation(donationId, { status: newStatus });
+
+      if (response.success) {
+        // Update local state
+        setDonations(donations.map(donation =>
+          donation._id === donationId ? { ...donation, status: newStatus } : donation
+        ));
+      } else {
+        setError('فشل في تحديث حالة طلب التبرع');
+      }
+    } catch (error) {
+      console.error('Error updating donation:', error);
+      setError('حدث خطأ أثناء تحديث طلب التبرع');
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -123,20 +116,27 @@ const DonationsManagement = () => {
     }
   };
 
-  const handleApproveDonation = (donationId) => {
-    // Handle approval logic here
-    console.log('Approving donation:', donationId);
-  };
-
-  const handleRejectDonation = (donationId) => {
-    // Handle rejection logic here
-    console.log('Rejecting donation:', donationId);
-  };
-
   const handleViewDetails = (donation) => {
     setSelectedDonation(donation);
     setShowDetailsModal(true);
   };
+
+  const filteredDonations = donations.filter(donation => {
+    const matchesSearch = donation.donorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         donation.donorPhone?.includes(searchTerm) ||
+                         donation.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -152,6 +152,15 @@ const DonationsManagement = () => {
             <p className="text-gray-600 mt-1">مراجعة وإدارة طلبات التبرع الواردة</p>
           </div>
           <div className="flex items-center space-x-2 space-x-reverse">
+            <Button
+              onClick={fetchDonations}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+              تحديث
+            </Button>
             <Badge className="bg-yellow-100 text-yellow-800">
               {donations.filter(d => d.status === 'pending').length} طلب في الانتظار
             </Badge>
@@ -190,7 +199,7 @@ const DonationsManagement = () => {
         <div className="space-y-4">
           {filteredDonations.map((donation) => (
             <motion.div
-              key={donation.id}
+              key={donation._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-lg shadow-sm p-6"
@@ -218,14 +227,14 @@ const DonationsManagement = () => {
                       </div>
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 ml-2" />
-                        {donation.requestDate}
+                        {new Date(donation.requestDate || donation.createdAt).toLocaleDateString('ar-SA')}
                       </div>
                     </div>
 
                     <div className="mb-4">
                       <h4 className="font-medium text-gray-900 mb-2">الأغراض المُتبرع بها:</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {donation.items.map((item, index) => (
+                        {donation.items?.map((item, index) => (
                           <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                             <span className="font-medium">{item.name}</span>
                             <div className="flex items-center space-x-2 space-x-reverse">
@@ -273,7 +282,7 @@ const DonationsManagement = () => {
                   {donation.status === 'pending' && (
                     <>
                       <Button
-                        onClick={() => handleApproveDonation(donation.id)}
+                        onClick={() => updateDonationStatus(donation._id, 'approved')}
                         className="bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
@@ -282,7 +291,7 @@ const DonationsManagement = () => {
                       </Button>
 
                       <Button
-                        onClick={() => handleRejectDonation(donation.id)}
+                        onClick={() => updateDonationStatus(donation._id, 'rejected')}
                         variant="destructive"
                         size="sm"
                       >
@@ -297,11 +306,21 @@ const DonationsManagement = () => {
           ))}
         </div>
 
-        {filteredDonations.length === 0 && (
+        {filteredDonations.length === 0 && !loading && (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد طلبات تبرع</h3>
             <p className="text-gray-500">لم يتم العثور على طلبات تبرع تطابق معايير البحث</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <XCircle className="w-5 h-5 text-red-600 ml-3" />
+              <p className="text-red-800">{error}</p>
+            </div>
           </div>
         )}
 
@@ -338,7 +357,7 @@ const DonationsManagement = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">البريد الإلكتروني</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedDonation.donorEmail}</p>
+                      <p className="mt-1 text-sm text-gray-900">{selectedDonation.donorEmail || 'غير محدد'}</p>
                     </div>
 
                     <div>
@@ -349,7 +368,7 @@ const DonationsManagement = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">الأغراض</label>
                       <div className="mt-2 space-y-2">
-                        {selectedDonation.items.map((item, index) => (
+                        {selectedDonation.items?.map((item, index) => (
                           <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                             <span>{item.name}</span>
                             <Badge variant="outline">{item.condition}</Badge>

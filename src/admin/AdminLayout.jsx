@@ -19,13 +19,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ProductsManagement from './ProductsManagement';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Mock notifications data
   const notifications = [
@@ -63,6 +64,7 @@ const AdminLayout = () => {
   const navigation = [
     { name: 'لوحة التحكم', href: '/admin', icon: LayoutDashboard },
     { name: 'إدارة المنتجات', href: '/admin/products', icon: Package },
+    { name: 'إدارة الطلبات', href: '/admin/orders', icon: ShoppingCart },
     { name: 'التحليلات', href: '/admin/analytics', icon: BarChart3 },
     { name: 'إدارة التبرعات', href: '/admin/donations', icon: Heart },
     { name: 'إدارة المستخدمين', href: '/admin/users', icon: Users },
@@ -71,7 +73,7 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = () => {
-    // Handle logout logic here
+    logout();
     navigate('/');
   };
 

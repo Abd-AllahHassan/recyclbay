@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
@@ -12,72 +12,23 @@ import {
   Package,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import apiService from '@/services/apiService';
 
 const ProductsManagement = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-
-  // Mock data - in real app, this would come from API
-  const products = [
-    {
-      id: 1,
-      name: 'هاتف ذكي سامسونج جالاكسي A52',
-      nameEn: 'Samsung Galaxy A52 Smartphone',
-      category: 'إلكترونيات',
-      price: 1200,
-      stock: 15,
-      status: 'active',
-      condition: 'مستعمل',
-      location: 'دبي',
-      image: 'https://via.placeholder.com/100',
-      dateAdded: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: 'كرسي مكتب مريح',
-      nameEn: 'Comfortable Office Chair',
-      category: 'أثاث',
-      price: 350,
-      stock: 8,
-      status: 'active',
-      condition: 'جديد',
-      location: 'أبوظبي',
-      image: 'https://via.placeholder.com/100',
-      dateAdded: '2024-01-14'
-    },
-    {
-      id: 3,
-      name: 'دراجة هوائية للأطفال',
-      nameEn: 'Kids Bicycle',
-      category: 'رياضة',
-      price: 280,
-      stock: 3,
-      status: 'low_stock',
-      condition: 'مستعمل',
-      location: 'الشارقة',
-      image: 'https://via.placeholder.com/100',
-      dateAdded: '2024-01-13'
-    },
-    {
-      id: 4,
-      name: 'طقم أواني مطبخ',
-      nameEn: 'Kitchen Utensils Set',
-      category: 'أدوات منزلية',
-      price: 95,
-      stock: 0,
-      status: 'out_of_stock',
-      condition: 'جديد',
-      location: 'دبي',
-      image: 'https://via.placeholder.com/100',
-      dateAdded: '2024-01-12'
-    }
-  ];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const categories = ['إلكترونيات', 'أثاث', 'رياضة', 'أدوات منزلية', 'ملابس', 'كتب'];
   const statuses = [
@@ -88,14 +39,62 @@ const ProductsManagement = () => {
     { value: 'inactive', label: 'غير نشط' }
   ];
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.nameEn.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
+  useEffect(() => {
+    fetchProducts();
+  }, [currentPage, selectedCategory, selectedStatus]);
 
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const params = {
+        page: currentPage,
+        limit: 10,
+      };
+
+      if (selectedCategory !== 'all') {
+        params.category = selectedCategory;
+      }
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      const response = await apiService.getProducts(params);
+
+      if (response.success) {
+        setProducts(response.data);
+        setTotalPages(Math.ceil(response.pagination?.total / 10) || 1);
+      } else {
+        setError('فشل في تحميل المنتجات');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('حدث خطأ أثناء تحميل المنتجات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteProduct = async (productId) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+      return;
+    }
+
+    try {
+      const response = await apiService.deleteProduct(productId);
+
+      if (response.success) {
+        setProducts(products.filter(product => product._id !== productId));
+      } else {
+        setError('فشل في حذف المنتج');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      setError('حدث خطأ أثناء حذف المنتج');
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -118,6 +117,22 @@ const ProductsManagement = () => {
     return <CheckCircle className="w-4 h-4 text-green-500" />;
   };
 
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.nameEn?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Helmet>
@@ -131,10 +146,21 @@ const ProductsManagement = () => {
             <h1 className="text-2xl font-bold text-gray-900">إدارة المنتجات</h1>
             <p className="text-gray-600 mt-1">إدارة ومراقبة جميع المنتجات في المنصة</p>
           </div>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 ml-2" />
-            إضافة منتج جديد
-          </Button>
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <Button
+              onClick={fetchProducts}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+              تحديث
+            </Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4 ml-2" />
+              إضافة منتج جديد
+            </Button>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -207,7 +233,7 @@ const ProductsManagement = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
                   <motion.tr
-                    key={product.id}
+                    key={product._id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="hover:bg-gray-50"
@@ -216,30 +242,30 @@ const ProductsManagement = () => {
                       <div className="flex items-center">
                         <img
                           className="h-12 w-12 rounded-lg object-cover ml-4"
-                          src={product.image}
+                          src={product.images || 'https://via.placeholder.com/100'}
                           alt={product.name}
                         />
                         <div>
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.location}</div>
+                          <div className="text-sm text-gray-500">{product.location || 'غير محدد'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.category}</div>
-                      <div className="text-sm text-gray-500">{product.condition}</div>
+                      <div className="text-sm text-gray-500">{product.condition || 'جديد'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product.price} درهم
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {getStockIcon(product.stock)}
-                        <span className="text-sm text-gray-900 mr-2">{product.stock}</span>
+                        {getStockIcon(product.stock || 0)}
+                        <span className="text-sm text-gray-900 mr-2">{product.stock || 0}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(product.status)}
+                      {getStatusBadge(product.status || 'active')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2 space-x-reverse">
@@ -249,7 +275,10 @@ const ProductsManagement = () => {
                         <button className="text-yellow-600 hover:text-yellow-900 p-1">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900 p-1">
+                        <button
+                          onClick={() => deleteProduct(product._id)}
+                          className="text-red-600 hover:text-red-900 p-1"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -269,24 +298,51 @@ const ProductsManagement = () => {
           )}
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <XCircle className="w-5 h-5 text-red-600 ml-3" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Pagination */}
-        <div className="flex items-center justify-between bg-white px-6 py-3 rounded-lg shadow-sm">
-          <div className="text-sm text-gray-700">
-            عرض <span className="font-medium">1</span> إلى <span className="font-medium">{filteredProducts.length}</span> من أصل{' '}
-            <span className="font-medium">{products.length}</span> نتيجة
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between bg-white px-6 py-3 rounded-lg shadow-sm">
+            <div className="text-sm text-gray-700">
+              عرض <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> إلى{' '}
+              <span className="font-medium">{Math.min(currentPage * 10, products.length)}</span> من أصل{' '}
+              <span className="font-medium">{products.length}</span> نتيجة
+            </div>
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                السابق
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className={currentPage === 1 ? 'bg-emerald-50 text-emerald-700' : ''}
+              >
+                {currentPage}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                التالي
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <Button variant="outline" size="sm" disabled>
-              السابق
-            </Button>
-            <Button variant="outline" size="sm" className="bg-emerald-50 text-emerald-700">
-              1
-            </Button>
-            <Button variant="outline" size="sm">
-              التالي
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
     </>
   );
