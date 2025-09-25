@@ -7,9 +7,9 @@
 1. **Backend URL**: The frontend is configured to use the backend at `https://resyclbay-bckend.vercel.app/api`
 
 2. **Vercel Configuration**: A `vercel.json` file is included to configure:
-   - Build settings for Vite
    - API route proxying to the backend
    - SPA routing fallback
+   - Vercel automatically detects Vite build settings from `package.json`
 
 ### Deploying
 
