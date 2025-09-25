@@ -1,5 +1,5 @@
 // API Service for RecycleBay Backend Integration - Functional Programming Approach
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://resyclbay-bckend.vercel.app/api';
 
 // Configuration constants
 const CONFIG = {
@@ -108,7 +108,7 @@ const makeRequest = async (url, config) => {
     }
 
     if (error.message.includes('Failed to fetch')) {
-      throw createError('CONNECTION_ERROR', 'Unable to connect to the backend server. Please check if the backend is running on http://localhost:5000');
+      throw createError('CONNECTION_ERROR', 'Unable to connect to the backend server. Please check if the backend is running and accessible.');
     }
 
     throw error;

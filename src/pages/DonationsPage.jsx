@@ -98,7 +98,7 @@ const DonationsPage = () => {
       };
 
       // Send donation data as JSON
-      const response = await fetch('http://localhost:5000/api/donations', {
+      const response = await fetch('https://resyclbay-bckend.vercel.app/api/donations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

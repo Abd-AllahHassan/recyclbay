@@ -57,7 +57,7 @@ const AdminLogin = () => {
       if (error.message.includes('CORS_ERROR')) {
         setError('خطأ في الاتصال: يرجى التأكد من أن الخادم الخلفي يعمل وأن إعدادات CORS صحيحة');
       } else if (error.message.includes('CONNECTION_ERROR')) {
-        setError('لا يمكن الاتصال بالخادم الخلفي. يرجى التأكد من أن الخادم يعمل على http://localhost:5000');
+        setError('لا يمكن الاتصال بالخادم الخلفي. يرجى التأكد من أن الخادم يعمل  ');
       } else if (error.message.includes('Failed to fetch')) {
         setError('فشل في الاتصال بالخادم. يرجى التحقق من تشغيل الخادم الخلفي');
       } else {
@@ -204,31 +204,7 @@ const AdminLogin = () => {
               </div>
             </form>
 
-            {/* Connection Status */}
-            <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-start">
-                <Server className="w-5 h-5 text-yellow-600 ml-3 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-yellow-900 mb-2">
-                    حالة الاتصال بالخادم
-                  </h3>
-                  <ul className="text-sm text-yellow-800 space-y-1">
-                    <li>• تأكد من تشغيل الخادم الخلفي على http://localhost:5000</li>
-                    <li>• تحقق من إعدادات CORS في الخادم</li>
-                    <li>• يجب أن يسمح الخادم بالطلبات من http://localhost:5173</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Demo Credentials */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="text-xs font-medium text-gray-700 mb-2">بيانات تجريبية:</h4>
-              <div className="text-xs text-gray-600 space-y-1">
-                <p><strong>اسم المستخدم:</strong> admin</p>
-                <p><strong>كلمة المرور:</strong> admin123</p>
-              </div>
-            </div>
+            
 
             {/* Info Section */}
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
@@ -239,7 +215,6 @@ const AdminLogin = () => {
                 <li>• يتم تشفير جميع البيانات المرسلة</li>
                 <li>• اسم المستخدم وكلمة المرور مطلوبان للوصول</li>
                 <li>• سيتم تسجيل خروجك تلقائياً عند انتهاء الجلسة</li>
-                <li>• يتم تخزين رمز الدخول بشكل آمن في المتصفح</li>
               </ul>
             </div>
           </motion.div>
