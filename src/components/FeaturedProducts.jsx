@@ -1,14 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { allProducts } from '@/data/products.js';
 import { useCart } from '@/contexts/CartContext';
-
-const products = allProducts.slice(0, 4);
+import apiService from '@/services/apiService';
 
 const FeaturedProducts = () => {
   const { addItem } = useCart();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getPublicProducts({ limit: 4 });
+
+        if (response.success) {
+          // Transform API response to match component expectations
+          const transformedProducts = response.data.map(product => ({
+            id: product._id,
+            name: product.name,
+            image: product.images && product.images.length > 0 ? product.images[0] : '/placeholder-image.jpg',
+            category: product.category,
+            price: `${product.price} ريال`,
+            description: product.description,
+            deliveryFee: 'مجاني',
+            deliveryTime: '1-2 أيام',
+            city: 'الرياض',
+            size: 'متوسط',
+            condition: product.condition
+          }));
+          setProducts(transformedProducts);
+        } else {
+          setError('فشل في تحميل المنتجات');
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('حدث خطأ في تحميل المنتجات');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleAddToCart = (product) => {
     addItem(product);
@@ -17,6 +54,48 @@ const FeaturedProducts = () => {
       description: `تمت إضافة "${product.name}" إلى سلة التسوق بنجاح.`,
     });
   };
+
+  if (loading) {
+    return (
+      <section id="featured-products" className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.h2
+            initial={{ opacity: 0, y: -50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-4xl font-extrabold text-center text-gray-800 mb-12 leading-tight"
+          >
+            أحدث القطع التي انضمت لمجموعتنا
+          </motion.h2>
+          <div className="flex justify-center items-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="featured-products" className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.h2
+            initial={{ opacity: 0, y: -50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-4xl font-extrabold text-center text-gray-800 mb-12 leading-tight"
+          >
+            أحدث القطع التي انضمت لمجموعتنا
+          </motion.h2>
+          <div className="text-center py-16">
+            <p className="text-red-600 text-lg">{error}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="featured-products" className="py-16 bg-gradient-to-b from-gray-50 to-white">

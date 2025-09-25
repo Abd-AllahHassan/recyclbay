@@ -1,0 +1,452 @@
+# RecycleBay API Endpoints Guide
+## Complete API Reference for Frontend Integration
+
+### 🎯 OVERVIEW
+This guide provides a comprehensive description of all available API endpoints for the RecycleBay backend system. The API uses secure token-based authentication and provides full CRUD operations for managing products, orders, donations, and admin functionality.
+
+---
+
+## 🔐 AUTHENTICATION SYSTEM
+
+### Admin Authentication
+- **Method**: Token-based authentication using a secure admin token
+- **Token**: `fdjbgndfkgbjdnkgbnruenbj42ithbjor93htuj45hRETHW$RTYHEWY@$%WEggbnkndlfb`
+- **Usage**: Include the token in the Authorization header for all protected routes
+- **Header Format**: `Authorization: Bearer {admin_token}`
+
+### Login Process
+1. Send POST request to `/api/auth/login` with the admin token
+2. Receive authentication confirmation and user details
+3. Store the token for subsequent API calls
+4. Use token in Authorization header for all protected endpoints
+
+---
+
+## 📊 API ENDPOINTS REFERENCE
+
+### Authentication Endpoints
+
+#### POST /api/auth/login
+**Purpose**: Authenticate admin user and receive access token
+**Request Body**:
+```json
+{
+  "token": "fdjbgndfkgbjdnkgbnruenbj42ithbjor93htuj45hRETHW$RTYHEWY@$%WEggbnkndlfb"
+}
+```
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "fdjbgndfkgbjdnkgbnruenbj42ithbjor93htuj45hRETHW$RTYHEWY@$%WEggbnkndlfb",
+  "data": {
+    "user": {
+      "id": "admin",
+      "name": "Administrator",
+      "role": "admin"
+    }
+  }
+}
+```
+
+#### GET /api/auth/me
+**Purpose**: Get current authenticated admin user information
+**Headers**: Authorization: Bearer {admin_token}
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "admin",
+      "name": "Administrator",
+      "role": "admin"
+    }
+  }
+}
+```
+
+---
+
+### Product Management Endpoints
+
+#### GET /api/products
+**Purpose**: Retrieve all products with pagination and filtering
+**Headers**: Authorization: Bearer {admin_token}
+**Query Parameters**:
+- page (number): Page number for pagination
+- limit (number): Number of items per page
+- category (string): Filter by product category
+- status (string): Filter by product status
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "product_id",
+      "name": "Product Name",
+      "description": "Product Description",
+      "category": "electronics",
+      "price": 299.99,
+      "quantity": 10,
+      "status": "active",
+      "condition": "good",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  }
+}
+```
+
+#### GET /api/products/:id
+**Purpose**: Retrieve a single product by ID
+**Headers**: Authorization: Bearer {admin_token}
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "product_id",
+    "name": "Product Name",
+    "description": "Product Description",
+    "category": "electronics",
+    "price": 299.99,
+    "quantity": 10,
+    "status": "active",
+    "condition": "good",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### POST /api/products
+**Purpose**: Create a new product
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+**Request Body**:
+```json
+{
+  "name": "New Product",
+  "description": "Product description",
+  "category": "electronics|furniture|clothing|books|home-appliances|sports|toys|other",
+  "price": 299.99,
+  "quantity": 10,
+  "condition": "new|like-new|good|fair|poor"
+}
+```
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Product created successfully",
+  "data": {
+    "_id": "new_product_id",
+    "name": "New Product",
+    "description": "Product description",
+    "category": "electronics",
+    "price": 299.99,
+    "quantity": 10,
+    "status": "active",
+    "condition": "good",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### PUT /api/products/:id
+**Purpose**: Update an existing product
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+**Request Body**: (same as POST, with fields to update)
+**Response**: Updated product object
+
+#### DELETE /api/products/:id
+**Purpose**: Delete a product
+**Headers**: Authorization: Bearer {admin_token}
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Product deleted successfully"
+}
+```
+
+---
+
+### Order Management Endpoints
+
+#### GET /api/orders
+**Purpose**: Retrieve all orders with filtering and pagination
+**Headers**: Authorization: Bearer {admin_token}
+**Query Parameters**:
+- page, limit: Pagination
+- status: Filter by order status
+- user: Filter by user ID
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "order_id",
+      "user": {
+        "_id": "user_id",
+        "name": "Customer Name"
+      },
+      "products": [
+        {
+          "product": "product_id",
+          "quantity": 2,
+          "price": 299.99
+        }
+      ],
+      "totalPrice": 599.98,
+      "status": "pending",
+      "shippingAddress": {
+        "street": "123 Main St",
+        "city": "New York",
+        "state": "NY",
+        "zipCode": "10001"
+      },
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### GET /api/orders/:id
+**Purpose**: Retrieve a single order by ID
+**Headers**: Authorization: Bearer {admin_token}
+**Response**: Single order object
+
+#### POST /api/orders
+**Purpose**: Create a new order
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+**Request Body**:
+```json
+{
+  "user": "user_id",
+  "products": [
+    {
+      "product": "product_id",
+      "quantity": 2,
+      "price": 299.99
+    }
+  ],
+  "totalPrice": 599.98,
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "zipCode": "10001",
+    "country": "US"
+  }
+}
+```
+
+#### PUT /api/orders/:id
+**Purpose**: Update order status or details
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+**Request Body**:
+```json
+{
+  "status": "processing|shipped|delivered|cancelled"
+}
+```
+
+#### DELETE /api/orders/:id
+**Purpose**: Delete an order
+**Headers**: Authorization: Bearer {admin_token}
+
+---
+
+### Donation Management Endpoints
+
+#### GET /api/donations
+**Purpose**: Retrieve all donations
+**Headers**: Authorization: Bearer {admin_token}
+**Response**: Array of donation objects
+
+#### GET /api/donations/:id
+**Purpose**: Retrieve a single donation
+**Headers**: Authorization: Bearer {admin_token}
+
+#### POST /api/donations
+**Purpose**: Create a new donation record
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+
+#### PUT /api/donations/:id
+**Purpose**: Update donation details
+**Headers**: Authorization: Bearer {admin_token}, Content-Type: application/json
+
+#### DELETE /api/donations/:id
+**Purpose**: Delete a donation record
+**Headers**: Authorization: Bearer {admin_token}
+
+---
+
+### Admin Dashboard Endpoints
+
+#### GET /api/admin/users
+**Purpose**: Retrieve all users in the system
+**Headers**: Authorization: Bearer {admin_token}
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "user_id",
+      "name": "User Name",
+      "email": "user@example.com",
+      "role": "user|manager|admin",
+      "isActive": true,
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### GET /api/admin/stats
+**Purpose**: Get system statistics and analytics
+**Headers**: Authorization: Bearer {admin_token}
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "products": {
+      "total": 150,
+      "active": 120,
+      "inactive": 30
+    },
+    "orders": {
+      "total": 450,
+      "pending": 50,
+      "processing": 100,
+      "shipped": 200,
+      "delivered": 90,
+      "cancelled": 10,
+      "totalRevenue": 125000.50
+    },
+    "users": {
+      "total": 1200,
+      "active": 1100,
+      "inactive": 100
+    }
+  }
+}
+```
+
+#### GET /api/admin/activity
+**Purpose**: Get recent system activity and logs
+**Headers**: Authorization: Bearer {admin_token}
+**Response**: Array of recent activities
+
+---
+
+## 🛠️ FRONTEND INTEGRATION DESCRIPTION
+
+### 1. Environment Setup
+Create environment variables in your React project:
+- `REACT_APP_API_URL`: Backend API base URL (http://localhost:5000/api)
+- `REACT_APP_ADMIN_TOKEN`: Admin authentication token
+
+### 2. API Service Layer
+Create a centralized service to handle all API communications:
+- Configure base URL and authentication headers
+- Implement request/response interceptors
+- Handle authentication token management
+- Provide consistent error handling
+
+### 3. Authentication Flow
+1. User enters admin token on login page
+2. Send token to `/api/auth/login` endpoint
+3. Store returned token in localStorage/sessionStorage
+4. Include token in Authorization header for all subsequent requests
+5. Redirect to admin dashboard on successful authentication
+
+### 4. State Management
+Use React hooks (useState, useEffect) to manage:
+- Authentication state
+- Loading states for API calls
+- Error handling and display
+- Data fetching and caching
+
+### 5. Component Structure
+Create reusable components for:
+- Admin login form
+- Product listing and management
+- Order management interface
+- Dashboard with statistics
+- User management interface
+
+### 6. Error Handling
+Implement comprehensive error handling:
+- Network connectivity issues
+- Authentication failures
+- API validation errors
+- User-friendly error messages
+
+### 7. Data Flow
+Establish clear data flow patterns:
+- API calls trigger loading states
+- Successful responses update component state
+- Errors display appropriate messages
+- Real-time updates for order status changes
+
+---
+
+## 📋 DATA MODELS DESCRIPTION
+
+### Product Data Structure
+- **Basic Info**: name, description, category, price, quantity
+- **Status Management**: active, inactive, out-of-stock
+- **Condition**: new, like-new, good, fair, poor
+- **Metadata**: creation date, last updated, seller information
+
+### Order Data Structure
+- **Customer Info**: user details and shipping address
+- **Items**: products, quantities, and pricing
+- **Status Tracking**: pending → processing → shipped → delivered
+- **Financial**: total price, payment status, transaction records
+
+### User Data Structure
+- **Profile**: name, email, contact information
+- **Role Management**: user, manager, admin permissions
+- **Activity**: registration date, last login, status
+
+---
+
+## 🚨 SECURITY CONSIDERATIONS
+
+1. **Token Security**: Store admin token securely, avoid exposing in client-side code
+2. **HTTPS**: Use HTTPS in production for all API communications
+3. **CORS**: Backend configured to accept requests from your frontend domain
+4. **Input Validation**: All inputs validated on both frontend and backend
+5. **Rate Limiting**: API endpoints protected against abuse
+
+---
+
+## 📞 SUPPORT INFORMATION
+
+### Common Issues:
+1. **401 Unauthorized**: Check if admin token is correct and properly formatted
+2. **404 Not Found**: Verify API endpoint URL and method
+3. **500 Server Error**: Check backend server logs for detailed error information
+4. **CORS Issues**: Ensure frontend domain is allowed in backend CORS configuration
+
+### Testing:
+1. Use browser developer tools to inspect network requests
+2. Test authentication flow separately before integrating other features
+3. Verify API responses match expected data structures
+4. Test error scenarios and edge cases
+
+---
+
+**Integration Complete! 🎉**
+Your React frontend is now ready to communicate with the RecycleBay backend API using the endpoints and patterns described in this guide.

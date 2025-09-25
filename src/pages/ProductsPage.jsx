@@ -1,18 +1,13 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Tag, ShieldCheck, Sparkles, Truck, Clock, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { allProducts } from '@/data/products.js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCart } from '@/contexts/CartContext';
-
-const categories = ['الكل', ...new Set(allProducts.map(p => p.category))];
-const cities = ['الكل', ...new Set(allProducts.map(p => p.city))];
-const sizes = ['الكل', ...new Set(allProducts.map(p => p.size))];
-const conditions = ['الكل', ...new Set(allProducts.map(p => p.condition))];
+import apiService from '@/services/apiService';
 
 const ProductCard = ({ product }) => {
   const { addItem, addToWishlist, removeFromWishlist, wishlist } = useCart();
@@ -97,25 +92,64 @@ const ProductCard = ({ product }) => {
 };
 
 const ProductsPage = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     category: 'الكل',
-    city: 'الكل',
-    size: 'الكل',
     condition: 'الكل'
   });
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getPublicProducts();
+
+        if (response.success) {
+          // Transform API response to match component expectations
+          const transformedProducts = response.data.map(product => ({
+            id: product._id,
+            name: product.name,
+            image: product.images && product.images.length > 0 ? product.images[0] : '/placeholder-image.jpg',
+            category: product.category,
+            price: `${product.price} ريال`,
+            description: product.description,
+            deliveryFee: 'مجاني',
+            deliveryTime: '1-2 أيام',
+            city: 'الرياض',
+            size: 'متوسط',
+            condition: product.condition
+          }));
+          setProducts(transformedProducts);
+        } else {
+          setError('فشل في تحميل المنتجات');
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('حدث خطأ في تحميل المنتجات');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(product => {
+    return products.filter(product => {
       return (filters.category === 'الكل' || product.category === filters.category) &&
-             (filters.city === 'الكل' || product.city === filters.city) &&
-             (filters.size === 'الكل' || product.size === filters.size) &&
              (filters.condition === 'الكل' || product.condition === filters.condition);
     });
-  }, [filters]);
+  }, [products, filters]);
+
+  // Generate filter options from current products
+  const categories = ['الكل', ...new Set(products.map(p => p.category))];
+  const conditions = ['الكل', ...new Set(products.map(p => p.condition))];
 
   return (
     <>
@@ -146,40 +180,44 @@ const ProductsPage = () => {
             </p>
           </motion.div>
 
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md mb-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Select onValueChange={(value) => handleFilterChange('city', value)} defaultValue="الكل">
-                  <SelectTrigger><SelectValue placeholder="المدينة" /></SelectTrigger>
-                  <SelectContent>{cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-              <Select onValueChange={(value) => handleFilterChange('size', value)} defaultValue="الكل">
-                  <SelectTrigger><SelectValue placeholder="الحجم" /></SelectTrigger>
-                  <SelectContent>{sizes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md mb-12 grid grid-cols-2 md:grid-cols-2 gap-4 max-w-md mx-auto">
+              <Select onValueChange={(value) => handleFilterChange('category', value)} defaultValue="الكل">
+                  <SelectTrigger><SelectValue placeholder="الفئة" /></SelectTrigger>
+                  <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
               <Select onValueChange={(value) => handleFilterChange('condition', value)} defaultValue="الكل">
                   <SelectTrigger><SelectValue placeholder="الحالة" /></SelectTrigger>
                   <SelectContent>{conditions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
-              <Select onValueChange={(value) => handleFilterChange('category', value)} defaultValue="الكل">
-                  <SelectTrigger><SelectValue placeholder="الفئة" /></SelectTrigger>
-                  <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
           </div>
 
-          <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <AnimatePresence>
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-          {filteredProducts.length === 0 && (
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
-            >
-                <p className="text-2xl font-semibold text-gray-500">عذراً، لا توجد منتجات تطابق معايير البحث الحالية.</p>
-            </motion.div>
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-red-600 text-lg">{error}</p>
+            </div>
+          ) : (
+            <>
+              <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <AnimatePresence>
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+              {filteredProducts.length === 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-16"
+                >
+                    <p className="text-2xl font-semibold text-gray-500">عذراً، لا توجد منتجات تطابق معايير البحث الحالية.</p>
+                </motion.div>
+              )}
+            </>
           )}
         </div>
       </section>

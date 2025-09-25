@@ -27,7 +27,7 @@ import CartPage from '@/pages/CartPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import AdminLogin from '@/admin/AdminLogin';
 import AdminLayout from '@/admin/AdminLayout';
-import Dashboard from '@/admin/Dashboard';
+import Dashboard from '@/admin/DashboardFinal';
 import ProductsManagement from '@/admin/ProductsManagement';
 import OrdersManagement from '@/admin/OrdersManagement';
 import DonationsManagement from '@/admin/DonationsManagement';

@@ -10,7 +10,9 @@ const CONFIG = {
   HEADERS: {
     CONTENT_TYPE: 'application/json',
     AUTHORIZATION: 'Authorization'
-  }
+  },
+  // Admin token for authentication
+  ADMIN_TOKEN: 'admin-secure-token-2024-change-this-in-production'
 };
 
 // Pure utility functions
@@ -21,11 +23,19 @@ const buildQueryString = (params) =>
     ? `?${new URLSearchParams(params).toString()}`
     : '';
 
-const createHeaders = (token) => (additionalHeaders = {}) => ({
-  'Content-Type': CONFIG.HEADERS.CONTENT_TYPE,
-  ...(token && { [CONFIG.HEADERS.AUTHORIZATION]: `Bearer ${token}` }),
-  ...additionalHeaders
-});
+const createHeaders = (token) => (additionalHeaders = {}) => (body) => {
+  const headers = {
+    ...(token && { [CONFIG.HEADERS.AUTHORIZATION]: `Bearer ${token}` }),
+    ...additionalHeaders
+  };
+
+  // Don't set Content-Type for FormData - let browser set it with boundary
+  if (!(body instanceof FormData)) {
+    headers['Content-Type'] = CONFIG.HEADERS.CONTENT_TYPE;
+  }
+
+  return headers;
+};
 
 // Token management - pure functions
 const getTokenFromStorage = () => localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN);
@@ -62,8 +72,8 @@ const METHODS = {
 // Request configuration builder
 const buildRequestConfig = (method, body, additionalHeaders = {}) => (token) => ({
   method,
-  headers: createHeaders(token)(additionalHeaders),
-  ...(body && { body: JSON.stringify(body) })
+  headers: createHeaders(token)(additionalHeaders)(body),
+  ...(body && { body: body instanceof FormData ? body : JSON.stringify(body) })
 });
 
 // Generic request handler - pure function
@@ -139,7 +149,7 @@ const createDeleteRequest = (endpoint) => (token) => () => {
 // Authentication functions
 const login = (token) => {
   const request = createPostRequest('/auth/login')();
-  return request({ token }).then(response => {
+  return request({ token: getTokenFromStorage() || CONFIG.ADMIN_TOKEN }).then(response => {
     if (response.success) {
       setTokenToStorage(response.token);
     }
@@ -148,7 +158,7 @@ const login = (token) => {
 };
 
 const adminLogin = (username, password) => {
-  const request = createPostRequest('/auth/login')(); // Correct endpoint: /auth/login
+  const request = createPostRequest('/auth/login')();
   return request({ username, password }).then(response => {
     if (response.success && response.token) {
       setTokenToStorage(response.token);
@@ -167,6 +177,12 @@ const getCurrentUser = () => {
 const getProducts = (params = {}) => {
   const token = getTokenFromStorage();
   const request = createGetRequest('/products')(token);
+  return request(params);
+};
+
+// Public products function - no authentication required
+const getPublicProducts = (params = {}) => {
+  const request = createGetRequest('/products')();
   return request(params);
 };
 
@@ -197,6 +213,8 @@ const deleteProduct = (id) => {
 // Order functions
 const getOrders = (params = {}) => {
   const token = getTokenFromStorage();
+  console.log('getOrders called with params:', params);
+  console.log('Token available:', !!token);
   const request = createGetRequest('/orders')(token);
   return request(params);
 };
@@ -207,9 +225,9 @@ const getOrder = (id) => {
   return request();
 };
 
-const createOrder = (orderData) => {
-  const token = getTokenFromStorage();
-  const request = createPostRequest('/orders')(token);
+const createOrderCheckout = (orderData) => {
+  // Orders checkout API is public, no authentication required
+  const request = createPostRequest('/orders/checkout')();
   return request(orderData);
 };
 
@@ -256,6 +274,12 @@ const deleteDonation = (id) => {
   return request();
 };
 
+const getDonationStats = () => {
+  const token = getTokenFromStorage();
+  const request = createGetRequest('/donations/stats')(token);
+  return request();
+};
+
 // Notification functions (NEW - based on API documentation)
 const getNotifications = (params = {}) => {
   const token = getTokenFromStorage();
@@ -296,7 +320,7 @@ const getUsers = () => {
 
 const getStats = () => {
   const token = getTokenFromStorage();
-  const request = createGetRequest('/admin/stats')(token);
+  const request = createGetRequest('/stats')(token);
   return request();
 };
 
@@ -313,6 +337,90 @@ const sendEmail = (emailData) => {
   return request(emailData);
 };
 
+// Image upload function
+const uploadImages = (files) => {
+  const token = getTokenFromStorage();
+  const formData = new FormData();
+
+  // Add files to FormData
+  files.forEach((file, index) => {
+    formData.append('images', file);
+  });
+
+  const request = createPostRequest('/upload')(token);
+  return request(formData);
+};
+
+// Product creation with images
+const createProductWithImages = async (productData, imageFiles = []) => {
+  try {
+    let imageUrls = [];
+
+    // Upload images first if any
+    if (imageFiles.length > 0) {
+      const uploadResponse = await uploadImages(imageFiles);
+      if (uploadResponse.success) {
+        imageUrls = uploadResponse.data.images;
+      } else {
+        throw new Error('فشل في تحميل الصور');
+      }
+    }
+
+    // Create product with image URLs
+    const productWithImages = {
+      ...productData,
+      images: imageUrls
+    };
+
+    return await createProduct(productWithImages);
+  } catch (error) {
+    console.error('Error creating product with images:', error);
+    throw error;
+  }
+};
+
+// Product update with images
+const updateProductWithImages = async (productId, productData, imageFiles = []) => {
+  try {
+    let imageUrls = [];
+
+    // Upload new images first if any
+    if (imageFiles.length > 0) {
+      const uploadResponse = await uploadImages(imageFiles);
+      if (uploadResponse.success) {
+        imageUrls = uploadResponse.data.images;
+      } else {
+        throw new Error('فشل في تحميل الصور');
+      }
+    }
+
+    // Get existing product to preserve current images if no new ones uploaded
+    const currentProduct = await getProduct(productId);
+    if (currentProduct.success) {
+      const existingImages = currentProduct.data.images || [];
+
+      // If no new images uploaded, keep existing ones
+      // If new images uploaded, add them to existing ones
+      const finalImages = imageFiles.length > 0
+        ? [...existingImages, ...imageUrls]
+        : existingImages;
+
+      // Update product with final image set
+      const productWithImages = {
+        ...productData,
+        images: finalImages
+      };
+
+      return await updateProduct(productId, productWithImages);
+    } else {
+      throw new Error('فشل في الحصول على بيانات المنتج الحالية');
+    }
+  } catch (error) {
+    console.error('Error updating product with images:', error);
+    throw error;
+  }
+};
+
 // Export all functions as an object
 const apiService = {
   // Authentication
@@ -322,15 +430,18 @@ const apiService = {
 
   // Products
   getProducts,
+  getPublicProducts,
   getProduct,
   createProduct,
+  createProductWithImages,
   updateProduct,
+  updateProductWithImages,
   deleteProduct,
 
   // Orders
   getOrders,
   getOrder,
-  createOrder,
+  createOrderCheckout,
   updateOrder,
   deleteOrder,
 
@@ -340,6 +451,7 @@ const apiService = {
   createDonation,
   updateDonation,
   deleteDonation,
+  getDonationStats,
 
   // Notifications (NEW)
   getNotifications,
@@ -355,6 +467,9 @@ const apiService = {
 
   // Email (NEW)
   sendEmail,
+
+  // Image upload
+  uploadImages,
 
   // Utility functions
   getTokenFromStorage,

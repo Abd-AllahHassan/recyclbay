@@ -1,0 +1,699 @@
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { motion } from 'framer-motion';
+import {
+  Package,
+  ShoppingCart,
+  Users,
+  Heart,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  BarChart3,
+  PieChart,
+  RefreshCw,
+  Plus,
+  Eye,
+  X,
+  Edit,
+  Trash2
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import apiService from '@/services/apiService';
+
+const Dashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Popup states
+  const [activePopup, setActivePopup] = useState(null);
+  const [popupData, setPopupData] = useState({
+    recentOrders: [],
+    pendingDonations: [],
+    analytics: null,
+    newProduct: { name: '', description: '', price: '', category: '', stock: '' }
+  });
+  const [popupLoading, setPopupLoading] = useState(false);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await apiService.getStats();
+
+      if (response.success) {
+        setStats(response.data);
+      } else {
+        setError('فشل في تحميل بيانات لوحة التحكم');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError('حدث خطأ أثناء تحميل بيانات لوحة التحكم');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data for popups
+  const fetchRecentOrders = async () => {
+    setPopupLoading(true);
+    try {
+      const response = await apiService.getOrders({ limit: 5, status: 'pending' });
+      if (response.success) {
+        setPopupData(prev => ({ ...prev, recentOrders: response.data }));
+      }
+    } catch (error) {
+      console.error('Error fetching recent orders:', error);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const fetchPendingDonations = async () => {
+    setPopupLoading(true);
+    try {
+      const response = await apiService.getDonations({ status: 'pending' });
+      if (response.success) {
+        setPopupData(prev => ({ ...prev, pendingDonations: response.data }));
+      }
+    } catch (error) {
+      console.error('Error fetching pending donations:', error);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    setPopupLoading(true);
+    try {
+      const response = await apiService.getStats();
+      if (response.success) {
+        setPopupData(prev => ({ ...prev, analytics: response.data.stats }));
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    try {
+      const response = await apiService.createProduct(popupData.newProduct);
+      if (response.success) {
+        alert('تم إضافة المنتج بنجاح');
+        setActivePopup(null);
+        setPopupData(prev => ({
+          ...prev,
+          newProduct: { name: '', description: '', price: '', category: '', stock: '' }
+        }));
+        fetchDashboardData(); // Refresh dashboard
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      alert('حدث خطأ أثناء إضافة المنتج');
+    }
+  };
+
+  const openPopup = (popupType) => {
+    setActivePopup(popupType);
+
+    // Fetch data based on popup type
+    switch (popupType) {
+      case 'orders':
+        fetchRecentOrders();
+        break;
+      case 'donations':
+        fetchPendingDonations();
+        break;
+      case 'analytics':
+        fetchAnalytics();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const closePopup = () => {
+    setActivePopup(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>لوحة التحكم - RecycleBay Admin</title>
+      </Helmet>
+
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
+            <p className="text-gray-600 mt-1">نظرة عامة على أداء المنصة</p>
+          </div>
+          <Button
+            onClick={fetchDashboardData}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+            تحديث
+          </Button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-red-600 ml-3" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {stats && (
+          <>
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats?.totalProducts || 0}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 ml-1" />
+                      <span className="text-sm font-medium text-green-600">
+                        {stats.stats?.activeProducts || 0} نشط
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-full bg-blue-100">
+                    <Package className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">إجمالي الطلبات</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats?.totalOrders || 0}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 ml-1" />
+                      <span className="text-sm font-medium text-green-600">
+                        {stats.stats?.totalRevenue || 0} درهم
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-full bg-green-100">
+                    <ShoppingCart className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">إجمالي المستخدمين</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats?.totalUsers || 0}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 ml-1" />
+                      <span className="text-sm font-medium text-green-600">
+                        {stats.stats?.activeUsers || 0} نشط
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-full bg-purple-100">
+                    <Users className="w-6 h-6 text-purple-600" />
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">طلبات التبرع</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats?.totalDonations || 0}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 ml-1" />
+                      <span className="text-sm font-medium text-green-600">
+                        {stats.stats?.pendingDonations || 0} في الانتظار
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-full bg-red-100">
+                    <Heart className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">إجراءات سريعة</h3>
+                <div className="space-y-3">
+                  <Dialog open={activePopup === 'product'} onOpenChange={(open) => !open && closePopup()}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="w-full justify-start bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => openPopup('product')}
+                      >
+                        <Plus className="w-4 h-4 ml-2" />
+                        إضافة منتج جديد
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>إضافة منتج جديد</DialogTitle>
+                        <DialogDescription>
+                          أدخل بيانات المنتج الجديد
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">الاسم</Label>
+                          <Input
+                            id="name"
+                            value={popupData.newProduct.name}
+                            onChange={(e) => setPopupData(prev => ({
+                              ...prev,
+                              newProduct: { ...prev.newProduct, name: e.target.value }
+                            }))}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="description" className="text-right">الوصف</Label>
+                          <Textarea
+                            id="description"
+                            value={popupData.newProduct.description}
+                            onChange={(e) => setPopupData(prev => ({
+                              ...prev,
+                              newProduct: { ...prev.newProduct, description: e.target.value }
+                            }))}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="price" className="text-right">السعر</Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            value={popupData.newProduct.price}
+                            onChange={(e) => setPopupData(prev => ({
+                              ...prev,
+                              newProduct: { ...prev.newProduct, price: e.target.value }
+                            }))}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="category" className="text-right">الفئة</Label>
+                          <Select onValueChange={(value) => setPopupData(prev => ({
+                            ...prev,
+                            newProduct: { ...prev.newProduct, category: value }
+                          }))}>
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="اختر الفئة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="electronics">إلكترونيات</SelectItem>
+                              <SelectItem value="furniture">أثاث</SelectItem>
+                              <SelectItem value="books">كتب</SelectItem>
+                              <SelectItem value="clothing">ملابس</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="stock" className="text-right">المخزون</Label>
+                          <Input
+                            id="stock"
+                            type="number"
+                            value={popupData.newProduct.stock}
+                            onChange={(e) => setPopupData(prev => ({
+                              ...prev,
+                              newProduct: { ...prev.newProduct, stock: e.target.value }
+                            }))}
+                            className="col-span-3"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end space-x-2 space-x-reverse">
+                        <Button variant="outline" onClick={closePopup}>إلغاء</Button>
+                        <Button onClick={handleCreateProduct}>إضافة المنتج</Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={activePopup === 'orders'} onOpenChange={(open) => !open && closePopup()}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => openPopup('orders')}
+                      >
+                        <Eye className="w-4 h-4 ml-2" />
+                        مراجعة الطلبات الجديدة
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>الطلبات الجديدة</DialogTitle>
+                        <DialogDescription>
+                          مراجعة وإدارة الطلبات الجديدة
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {popupLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {popupData.recentOrders.map((order) => (
+                              <div key={order._id} className="border rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <p className="font-medium">طلب #{order._id.slice(-6)}</p>
+                                    <p className="text-sm text-gray-600">{order.user?.name}</p>
+                                  </div>
+                                  <Badge className="bg-yellow-100 text-yellow-800">
+                                    {order.status}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  <p>المجموع: {order.totalPrice} درهم</p>
+                                  <p>تاريخ الطلب: {new Date(order.createdAt).toLocaleDateString('ar')}</p>
+                                </div>
+                              </div>
+                            ))}
+                            {popupData.recentOrders.length === 0 && (
+                              <p className="text-center text-gray-500 py-8">لا توجد طلبات جديدة</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={activePopup === 'donations'} onOpenChange={(open) => !open && closePopup()}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => openPopup('donations')}
+                      >
+                        <Heart className="w-4 h-4 ml-2" />
+                        مراجعة طلبات التبرع
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>طلبات التبرع</DialogTitle>
+                        <DialogDescription>
+                          مراجعة وإدارة طلبات التبرع الجديدة
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {popupLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {popupData.pendingDonations.map((donation) => (
+                              <div key={donation._id} className="border rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <p className="font-medium">{donation.donorName}</p>
+                                    <p className="text-sm text-gray-600">{donation.donorPhone}</p>
+                                  </div>
+                                  <Badge className="bg-blue-100 text-blue-800">
+                                    {donation.status}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  <p>الموقع: {donation.location}</p>
+                                  <p>عدد العناصر: {donation.items?.length || 0}</p>
+                                  <p>تاريخ الطلب: {new Date(donation.createdAt).toLocaleDateString('ar')}</p>
+                                </div>
+                                {donation.notes && (
+                                  <p className="text-sm text-gray-500 mt-2">ملاحظات: {donation.notes}</p>
+                                )}
+                              </div>
+                            ))}
+                            {popupData.pendingDonations.length === 0 && (
+                              <p className="text-center text-gray-500 py-8">لا توجد طلبات تبرع في الانتظار</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={activePopup === 'analytics'} onOpenChange={(open) => !open && closePopup()}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => openPopup('analytics')}
+                      >
+                        <BarChart3 className="w-4 h-4 ml-2" />
+                        عرض التحليلات
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>التحليلات السريعة</DialogTitle>
+                        <DialogDescription>
+                          نظرة عامة على أداء المنصة
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {popupLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                          </div>
+                        ) : popupData.analytics ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-blue-50 p-4 rounded-lg">
+                                <p className="text-sm text-blue-600">معدل التحويل</p>
+                                <p className="text-2xl font-bold text-blue-800">
+                                  {popupData.analytics.conversionRate}%
+                                </p>
+                              </div>
+                              <div className="bg-green-50 p-4 rounded-lg">
+                                <p className="text-sm text-green-600">متوسط قيمة الطلب</p>
+                                <p className="text-2xl font-bold text-green-800">
+                                  {popupData.analytics.averageOrderValue} درهم
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <span className="text-sm">المنتجات النشطة</span>
+                                <span className="font-medium">{popupData.analytics.activeProducts}</span>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <span className="text-sm">الطلبات المعلقة</span>
+                                <span className="font-medium">{popupData.analytics.pendingOrders}</span>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <span className="text-sm">طلبات التبرع المعلقة</span>
+                                <span className="font-medium">{popupData.analytics.pendingDonations}</span>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <span className="text-sm">المستخدمون النشطون</span>
+                                <span className="font-medium">{popupData.analytics.activeUsers}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-center text-gray-500 py-8">لا توجد بيانات تحليلية متاحة</p>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 }}
+                className="bg-white rounded-lg shadow-sm p-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">التنبيهات</h3>
+                <div className="space-y-4">
+                  {stats.stats?.lowStockProducts > 0 && (
+                    <div className="flex items-start space-x-3 space-x-reverse">
+                      <div className="p-2 rounded-full bg-yellow-100">
+                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">منتجات نفد مخزونها</p>
+                        <p className="text-sm text-gray-600">
+                          {stats.stats.lowStockProducts} منتج يحتاج إعادة تخزين
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {stats.stats?.pendingOrders > 0 && (
+                    <div className="flex items-start space-x-3 space-x-reverse">
+                      <div className="p-2 rounded-full bg-blue-100">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">طلبات في الانتظار</p>
+                        <p className="text-sm text-gray-600">
+                          {stats.stats.pendingOrders} طلب يحتاج معالجة
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {stats.stats?.pendingDonations > 0 && (
+                    <div className="flex items-start space-x-3 space-x-reverse">
+                      <div className="p-2 rounded-full bg-red-100">
+                        <Heart className="w-4 h-4 text-red-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">طلبات تبرع جديدة</p>
+                        <p className="text-sm text-gray-600">
+                          {stats.stats.pendingDonations} طلب تبرع في الانتظار
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {(!stats.stats?.lowStockProducts && !stats.stats?.pendingOrders && !stats.stats?.pendingDonations) && (
+                    <div className="flex items-start space-x-3 space-x-reverse">
+                      <div className="p-2 rounded-full bg-green-100">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">كل شيء على ما يرام</p>
+                        <p className="text-sm text-gray-600">
+                          لا توجد تنبيهات حالياً
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Recent Activity */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="bg-white rounded-lg shadow-sm p-6"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">النشاط الحديث</h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <div className="p-2 rounded-full bg-blue-100">
+                    <ShoppingCart className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">طلب جديد #1234</p>
+                    <p className="text-sm text-gray-600">منذ 5 دقائق</p>
+                  </div>
+                  <Badge className="bg-yellow-100 text-yellow-800">في الانتظار</Badge>
+                </div>
+
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <div className="p-2 rounded-full bg-green-100">
+                    <Package className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">تم تسليم طلب #1233</p>
+                    <p className="text-sm text-gray-600">منذ 15 دقيقة</p>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800">تم التسليم</Badge>
+                </div>
+
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <div className="p-2 rounded-full bg-red-100">
+                    <Heart className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">طلب تبرع جديد</p>
+                    <p className="text-sm text-gray-600">منذ ساعة</p>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800">في الانتظار</Badge>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default Dashboard;

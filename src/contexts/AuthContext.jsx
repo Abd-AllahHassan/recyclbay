@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const token = apiService.getToken();
+      const token = apiService.getTokenFromStorage();
       if (token) {
         const response = await apiService.getCurrentUser();
         if (response.success) {
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    apiService.clearToken();
+    apiService.clearTokenFromStorage();
     setUser(null);
     setIsAuthenticated(false);
   };

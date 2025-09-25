@@ -35,6 +35,7 @@ const Header = () => {
     { name: 'الرئيسية', href: '/' },
     { name: 'المنتجات', href: '/products' },
     { name: 'خدماتنا', href: '/services' },
+    { name: 'تبرع', href: '/donations' },
     { name: 'من نحن', href: '/about' },
     { name: 'تواصل معنا', href: '/contact' },
   ];
