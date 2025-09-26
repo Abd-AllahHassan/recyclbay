@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Package,
@@ -27,6 +28,20 @@ const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const notificationsRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Mock notifications data
   const notifications = [
@@ -102,11 +117,30 @@ const AdminLayout = () => {
         </div>
 
         <nav className="mt-8 px-4 flex-grow overflow-y-auto overscroll-contain">
-          <ul className="space-y-2">
+          <motion.ul
+            className="space-y-2"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: {
+                transition: {
+                  staggerChildren: 0.1,
+                },
+              },
+            }}
+          >
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
-                <li key={item.name}>
+                <motion.li
+                  key={item.name}
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
+                  transition={{ duration: 0.3 }}
+                >
                   <Link
                     to={item.href}
                     className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
@@ -119,10 +153,10 @@ const AdminLayout = () => {
                     <item.icon className="w-5 h-5 ml-3" />
                     {item.name}
                   </Link>
-                </li>
+                </motion.li>
               );
             })}
-          </ul>
+          </motion.ul>
         </nav>
 
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
@@ -144,25 +178,61 @@ const AdminLayout = () => {
           <div className="flex items-center justify-between h-16 px-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500"
+              className="p-2 rounded-md text-gray-400 hover:text-gray-500 lg:hidden"
             >
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center space-x-4 space-x-reverse">
+            <motion.div
+              className="flex items-center space-x-2 space-x-reverse w-full lg:w-auto justify-center lg:justify-end"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: 0.1,
+                  },
+                },
+              }}
+            >
               {/* Search */}
-              <div className="relative hidden md:block">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="text"
-                  placeholder="البحث..."
-                  className="w-64 pr-10"
-                />
-              </div>
+              <motion.div 
+                className="relative flex-shrink-0"
+                variants={{
+                  hidden: { opacity: 0, y: -10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 text-gray-400 hover:text-gray-500"
+                >
+                  <Search className="w-5 h-5" />
+                </motion.button>
+                <div className="hidden sm:block relative">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="البحث..."
+                    className="w-48 sm:w-64 pr-10"
+                  />
+                </div>
+              </motion.div>
 
               {/* Notifications */}
-              <div className="relative">
-                <button
+              <motion.div
+                ref={notificationsRef}
+                className="relative"
+                variants={{
+                  hidden: { opacity: 0, y: -10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                   className="p-2 text-gray-400 hover:text-gray-500 relative"
                 >
@@ -172,11 +242,15 @@ const AdminLayout = () => {
                       {unreadCount}
                     </span>
                   )}
-                </button>
+                </motion.button>
 
                 {/* Notifications Dropdown */}
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                  >
                     <div className="p-4 border-b border-gray-200">
                       <h3 className="text-sm font-medium text-gray-900">الإشعارات</h3>
                     </div>
@@ -213,18 +287,27 @@ const AdminLayout = () => {
                         عرض جميع الإشعارات
                       </Button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
 
               {/* User menu */}
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+              <motion.div 
+                className="flex items-center space-x-2 space-x-reverse"
+                variants={{
+                  hidden: { opacity: 0, y: -10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center"
+                >
                   <User className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-gray-700">المدير</span>
-              </div>
-            </div>
+                </motion.div>
+                <span className="hidden sm:inline text-sm font-medium text-gray-700">المدير</span>
+              </motion.div>
+            </motion.div>
           </div>
         </header>
 

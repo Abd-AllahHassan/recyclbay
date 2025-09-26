@@ -8,8 +8,14 @@ import Shipping from '@/components/Shipping';
 import FeaturedProducts from '@/components/FeaturedProducts';
 import AboutSection from '@/components/AboutSection';
 import SellWithUs from '@/components/SellWithUs';
+import { motion } from 'framer-motion';
 
 function HomePage() {
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
+  };
+
   return (
     <>
       <Helmet>
@@ -22,21 +28,80 @@ function HomePage() {
         <meta property="og:type" content="website" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        <style>{`
+          html {
+            scroll-behavior: smooth;
+          }
+        `}</style>
       </Helmet>
 
       <div className="flex flex-col min-h-screen">
-        <Hero />
-        <Mission />
-        <FeaturedProducts />
-        <SellWithUs />
-        <div id="services">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <Hero />
+        </motion.div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <Mission />
+        </motion.div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <FeaturedProducts />
+        </motion.div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <SellWithUs />
+        </motion.div>
+        <motion.div
+          id="services"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
           <Services />
-        </div>
-        <WhyChooseUs />
-        <div id="about">
+        </motion.div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <WhyChooseUs />
+        </motion.div>
+        <motion.div
+          id="about"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
           <AboutSection />
-        </div>
-        <Shipping />
+        </motion.div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={sectionVariants}
+        >
+          <Shipping />
+        </motion.div>
       </div>
     </>
   );

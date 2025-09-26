@@ -66,7 +66,7 @@ const Header = () => {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="fixed top-0 w-full z-50 glass-effect shadow-lg"
+      className="fixed top-0 w-full z-50 bg-white shadow-lg"
     >
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-3 space-x-reverse">
@@ -87,22 +87,44 @@ const Header = () => {
           </motion.div>
         </Link>
 
-        <nav className="hidden md:flex items-center space-x-8 space-x-reverse">
+        <motion.nav
+          className="hidden md:flex items-center space-x-8 space-x-reverse"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2,
+              },
+            },
+          }}
+        >
           {menuItems.map((item, index) => (
             <motion.button
               key={item.name}
               onClick={() => handleNavClick(item.href)}
               className="text-gray-700 hover:text-emerald-600 font-medium transition-colors duration-300 relative group bg-transparent border-none"
-              whileHover={{ y: -2 }}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -2, scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              variants={{
+                hidden: { opacity: 0, y: -20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
               {item.name}
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 group-hover:w-full transition-all duration-300"></span>
+              <motion.span
+                className="absolute bottom-0 left-0 h-0.5 bg-emerald-500"
+                initial={{ width: 0 }}
+                whileHover={{ width: "100%" }}
+                transition={{ duration: 0.3 }}
+              />
             </motion.button>
           ))}
-        </nav>
+        </motion.nav>
 
         <div className="hidden md:flex items-center space-x-4 space-x-reverse">
           <button
@@ -133,15 +155,20 @@ const Header = () => {
           {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
 
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="md:hidden mt-4 py-4 border-t border-emerald-100"
-        >
-          <nav className="flex flex-col space-y-4 px-4">
-            <div className="flex justify-end">
+      <motion.div
+        initial={false}
+        animate={isMenuOpen ? "open" : "closed"}
+        variants={{
+          open: { opacity: 1, x: 0 },
+          closed: { opacity: 0, x: "100%" },
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={`md:hidden fixed top-0 right-0 w-80 h-full bg-white shadow-2xl z-40 transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out`}
+        style={{ display: isMenuOpen ? 'block' : 'none' }}
+      >
+        <div className="flex flex-col h-full pt-20 px-6">
+          <nav className="flex flex-col space-y-6">
+            <div className="flex justify-end mb-4">
               <button
                 onClick={togglePopup}
                 aria-label="Cart"
@@ -155,24 +182,34 @@ const Header = () => {
                 )}
               </button>
             </div>
-            {menuItems.map((item) => (
-              <button
+            {menuItems.map((item, index) => (
+              <motion.button
                 key={item.name}
                 onClick={() => handleNavClick(item.href)}
-                className="text-gray-700 hover:text-emerald-600 font-medium text-right py-2 transition-colors bg-transparent border-none"
+                className="text-gray-700 hover:text-emerald-600 font-medium text-right py-3 transition-colors bg-transparent border-none text-lg"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ x: -10 }}
               >
                 {item.name}
-              </button>
+              </motion.button>
             ))}
-            <Button
-              onClick={handleShopClick}
-              className="hero-gradient text-white px-6 py-2 rounded-full font-medium mt-4"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: menuItems.length * 0.1 }}
             >
-              تسوق الآن
-            </Button>
+              <Button
+                onClick={handleShopClick}
+                className="hero-gradient text-white px-6 py-3 rounded-full font-medium w-full mt-6"
+              >
+                تسوق الآن
+              </Button>
+            </motion.div>
           </nav>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
       </div>
       <CartPopup />
     </motion.header>
