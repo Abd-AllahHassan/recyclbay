@@ -8,7 +8,20 @@
   font-family: 'Cairo', sans-serif;
 }
 
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
   @apply bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 text-gray-800;
   direction: rtl;
 }

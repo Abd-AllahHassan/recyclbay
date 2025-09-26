@@ -35,7 +35,21 @@ function HomePage() {
         `}</style>
       </Helmet>
 
-      <div className="flex flex-col min-h-screen">
+      <motion.div
+        className="w-full flex flex-col min-h-screen"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: false }}
+        variants={{
+          hidden: { opacity: 1 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.2,
+            },
+          },
+        }}
+      >
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -102,7 +116,7 @@ function HomePage() {
         >
           <Shipping />
         </motion.div>
-      </div>
+      </motion.div>
     </>
   );
 }

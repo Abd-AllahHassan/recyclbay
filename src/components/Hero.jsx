@@ -13,7 +13,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-32 lg:pt-20">
+    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden pt-20">
       <video
         autoPlay
         muted
